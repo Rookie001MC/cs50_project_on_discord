@@ -9,6 +9,8 @@ python-dotenv = "*"
 hikari-lightbulb = "*"
 requests = "*"
 xkcd = "*"
+pandas = "*"
+beautifulsoup4 = "*"
 
 [dev-packages]
 black = "*"
