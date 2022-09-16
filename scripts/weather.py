@@ -1,17 +1,24 @@
 import datetime
 import os
 
+import lightbulb
 import requests
 
 global api_key
 api_key = os.getenv("WEATHER_API_KEY", None)
+
+plugin = lightbulb.Plugin("Weather")
 
 
 def main():
     pass
 
 
-def weather_fetch(user_input):
+@plugin.command
+@lightbulb.option("city", "Name of city in (City, Country in 2 letters)", type=str)
+@lightbulb.command("weather", "Gets the current weather of a city")
+@lightbulb.implements(lightbulb.SlashCommand)
+async def weather_fetch(ctx):
     """Fetches the current weather of an user-inputted city.
 
     Args:
@@ -26,43 +33,35 @@ def weather_fetch(user_input):
         - Invalid format
         - The weather itself.
     """
-    command_args = user_input.split(" ", 1)
-    print(command_args)
-    if len(command_args) <= 1:
-        message = "Too few arguments!"
-    elif len(command_args) > 2:
-        message = "Too many arguments!"
+    city = ctx.options.city
+    coords = city_coords_fetch(city)
+
+    if coords is False:
+        message = "City does not exist!"
+    elif coords == "Err-Wrong-Format":
+        message = "Invalid format! Must be (City name-Country in 2 letters)"
     else:
-        city = command_args[1]
-        coords = city_coords_fetch(city)
+        lat, lon = coords
+        (
+            city_name,
+            weather_emoji,
+            temp,
+            humidity,
+            wind_speed,
+            weather,
+            timezone,
+        ) = call_weather_api(lat, lon)
 
-        if coords is False:
-            message = "City does not exist!"
-        elif coords == "Err-Wrong-Format":
-            message = "Invalid format! Must be (City name-Country in 2 letters)"
-        else:
-            lat, lon = coords
-            (
-                city_name,
-                weather_emoji,
-                temp,
-                humidity,
-                wind_speed,
-                weather,
-                timezone,
-            ) = call_weather_api(lat, lon)
+        message = f"""Showing the weather for ***{city_name}***:
 
-            message = f"""Showing the weather for {city_name}:
+***Local time***: {timezone} (Indochina time).
 
-Local time: {timezone}.
+Current weather is {weather_emoji} *{weather}*, with a temperature of *{(temp)}⁰C*.
 
-Current weather is {weather_emoji} {weather}, with a temperature of {(temp)}⁰C.
+***Wind speed***: {wind_speed} km/h.
+***Humidity***: {humidity}%"""
 
-Wind speed is {wind_speed} km/h.
-Humidity is {humidity}%"""
-
-    response = {"text": message}
-    return response
+    await ctx.respond(f"{message}")
 
 
 def city_coords_fetch(city):
@@ -206,6 +205,10 @@ def get_date(timezone):
     """
     tz = datetime.timezone(datetime.timedelta(seconds=int(timezone)))
     return datetime.datetime.now(tz=tz).strftime("%d/%m/%Y, %H:%M")
+
+
+def load(bot):
+    bot.add_plugin(plugin)
 
 
 if __name__ == "__main__":
