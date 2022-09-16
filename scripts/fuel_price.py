@@ -1,10 +1,17 @@
+import hikari
+import lightbulb
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 from dateutil.parser import parse
 
+fuel_price_plugin = lightbulb.Plugin("VNFuelPriceGetter")
 
-def price_get():
+
+@fuel_price_plugin.command
+@lightbulb.command("fuel", "Checks the current fuel price in Vietnam")
+@lightbulb.implements(lightbulb.SlashCommand)
+async def price_get(ctx):
     """Gets the price of Vietnam's common used fuel types.
     This does a few things before actually sending the message to user:
     - Calls get_page() to get the page data
@@ -26,7 +33,7 @@ def price_get():
         fuel_data = table_parsing(table)
 
         response_object = create_response_object(fuel_data)
-    return response_object
+        await ctx.respond(response_object)
 
 
 def get_page():
@@ -111,11 +118,11 @@ def offset_price_emoji(offset_price):
         Returns "no change" if there is no change in price.
     """
     if offset_price == 0:
-        return "no change"
+        return "***no change***"
     elif offset_price < 0:
-        offset_with_icon = f"⬇️ down {abs(offset_price)} dong/liter"
+        offset_with_icon = f"***⬇️ down {abs(offset_price)} dong/liter***"
     else:
-        offset_with_icon = f"⬆️ up {offset_price} dong/liter"
+        offset_with_icon = f"***⬆ up {offset_price} dong/liter***"
     return offset_with_icon
 
 
@@ -136,17 +143,20 @@ def create_response_object(data):
         data_string = ""
 
         for product in fuel_data:
-            data_string += f"{product['product']}: {product['price']} dong/liter - {offset_price_emoji(product['offset_by_previous'])} compared to last adjustment.\n"
+            data_string += f"__{product['product']}__: {product['price']} dong/liter - {offset_price_emoji(product['offset_by_previous'])} compared to last adjustment.\n"
 
-        response = {
-            "text": f"""Showing current Vietnam fuel prices:
-Last adjustment: {last_updated}
+        response = f"""***Showing current Vietnam fuel prices:***
+__Last adjustment:__ {last_updated}
 
 {data_string}
-Source:
+__Source__:
 https://www.pvoil.com.vn/truyen-thong/tin-gia-xang-dau"""
-        }
     return response
+
+
+def load(bot):
+    """Loads this file as a Hikari-Lightbulb extension."""
+    bot.add_plugin(fuel_price_plugin)
 
 
 # Yes, this script can be run, but for local debug only
