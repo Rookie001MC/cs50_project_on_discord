@@ -8,6 +8,7 @@ hikari = "*"
 python-dotenv = "*"
 hikari-lightbulb = "*"
 requests = "*"
+xkcd = "*"
 
 [dev-packages]
 black = "*"
