@@ -12,5 +12,5 @@ bot = lightbulb.BotApp(
     token=discord_bot_token, default_enabled_guilds=server_to_register_command
 )
 
-bot.load_extensions("scripts.weather", "scripts.xkcd_fetch")
+bot.load_extensions_from("./scripts")
 bot.run()
