@@ -1,64 +1,72 @@
+import random
+
+import hikari
+import lightbulb
 import xkcd
 
+xkcd_plugin = lightbulb.Plugin("Weather")
 
-def fetcher(user_input):
-    """Process the inputted command and fetches the requested comic.
 
-    Args:
-        user_input (str): the command as inputted by user.
+@xkcd_plugin.command
+@lightbulb.command("xkcd", "Gets a webcomic from XKCD.com")
+@lightbulb.implements(lightbulb.SlashCommandGroup)
+async def xkcd_group():
+    pass
 
-    Returns:
-        dict: a response object to be sent back to the `handle_message` function for processing and sending to FB.
-    """
-    commands = user_input.split(" ")
-    found = True
-    if len(commands) == 1:
-        comic_object = xkcd.getLatestComic()
-    elif len(commands) == 2:
-        subcommand = commands[1]
-        if subcommand == "latest":
-            comic_object = xkcd.getLatestComic()
 
-        elif subcommand == "random":
-            comic_object = xkcd.getRandomComic()
+@xkcd_group.child
+@lightbulb.command("latest", "Gets the latest comic from XKCD.com")
+@lightbulb.implements(lightbulb.SlashSubCommand)
+async def xkcd_latest(ctx):
+    comic_object = xkcd.getLatestComic()
+    comic_number = xkcd.getLatestComicNum()
+    comic_info = info_getter(comic_object)
+    comic_url = f"https://xkcd.com/{comic_number}"
+    embed = hikari.Embed(
+        color=0x32A852, title=comic_info[0], description=comic_info[1]
+    ).set_image(comic_info[2])
+    embed.add_field("Comic number", comic_number, inline=True)
+    embed.add_field("Comic URL", comic_url, inline=True)
+    await ctx.respond(embed)
 
-        else:
-            try:
-                input_comic_num = int(subcommand)
-            except ValueError:
-                err_message = "Invalid comic number or subcommand!"
-                found = False
-            else:
-                if 1 <= input_comic_num <= xkcd.getLatestComicNum():
-                    comic_object = xkcd.getComic(input_comic_num)
-                else:
-                    err_message = f"Your requested comic, number {input_comic_num}, does not exist!"
-                    found = False
 
-    elif len(commands) > 2:
-        err_message = "Too many arguments!"
-        found = False
+@xkcd_group.child
+@lightbulb.command("random", "Gets a random comic from XKCD.com")
+@lightbulb.implements(lightbulb.SlashSubCommand)
+async def xkcd_random(ctx):
+    random.seed()
+    comic_number = random.randint(1, xkcd.getLatestComicNum())
+    comic_object = xkcd.getComic(number=comic_number)
+    comic_info = info_getter(comic_object)
+    comic_url = f"https://xkcd.com/{comic_number}"
+    embed = hikari.Embed(
+        color=0x32A852, title=comic_info[0], description=comic_info[1]
+    ).set_image(comic_info[2])
+    embed.add_field("Comic number", comic_number, inline=True)
+    embed.add_field("Comic URL", comic_url, inline=True)
+    await ctx.respond(embed)
 
-    if found is True:
 
-        alt_text, image_url = info_getter(comic_object)
-        response = [
-            {"text": alt_text},
-            {
-                "attachment": {
-                    "type": "image",
-                    "payload": {
-                        "url": image_url,
-                    },
-                },
-            },
-        ]
+@xkcd_group.child
+@lightbulb.option("comic_num", "Comic number", type=int)
+@lightbulb.command("specific", "Gets a specific comic from XKCD.com")
+@lightbulb.implements(lightbulb.SlashSubCommand)
+async def xkcd_specific(ctx):
+    comic_number = ctx.options.comic_num
+    if 1 <= comic_number <= xkcd.getLatestComicNum():
+        comic_object = xkcd.getComic(number=comic_number)
+        comic_info = info_getter(comic_object)
+        comic_url = f"https://xkcd.com/{comic_number}"
+        embed = hikari.Embed(
+            color=0x32A852, title=comic_info[0], description=comic_info[1]
+        ).set_image(comic_info[2])
+        embed.add_field("Comic number", comic_number, inline=True)
+        embed.add_field("Comic URL", comic_url, inline=True)
+        await ctx.respond(embed)
     else:
-        response = {
-            "text": err_message,
-        }
-
-    return response
+        await ctx.respond(
+            "**Error**: This comic does not exist!", flags=hikari.MessageFlag.EPHEMERAL
+        )
 
 
 def info_getter(comic):
@@ -70,6 +78,12 @@ def info_getter(comic):
     Returns:
         list: Containing alt_text and image_url of the comic.
     """
+    title = comic.getTitle()
     alt_text = comic.getAltText()
     image_url = comic.getImageLink()
-    return [alt_text, image_url]
+    return [title, alt_text, image_url]
+
+
+def load(bot):
+    """Loads this file as a Hikari-Lightbulb extension."""
+    bot.add_plugin(xkcd_plugin)
