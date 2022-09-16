@@ -1,12 +1,13 @@
 import datetime
 import os
 
+import hikari
 import lightbulb
 import requests
 
 global api_key
 api_key = os.getenv("WEATHER_API_KEY", None)
-
+# api_key = None
 plugin = lightbulb.Plugin("Weather")
 
 
@@ -38,8 +39,13 @@ async def weather_fetch(ctx):
 
     if coords is False:
         message = "City does not exist!"
+        await ctx.respond(f"**Error**: {message}", flags=hikari.MessageFlag.EPHEMERAL)
     elif coords == "Err-Wrong-Format":
         message = "Invalid format! Must be (City name-Country in 2 letters)"
+        await ctx.respond(f"**Error**: {message}", flags=hikari.MessageFlag.EPHEMERAL)
+    elif coords == "Err-Internal":
+        message = "An exception has occured when running this command!"
+        await ctx.respond(f"**Error**: {message}", flags=hikari.MessageFlag.EPHEMERAL)
     else:
         lat, lon = coords
         (
@@ -61,7 +67,7 @@ Current weather is {weather_emoji} *{weather}*, with a temperature of *{(temp)}â
 ***Wind speed***: {wind_speed} km/h.
 ***Humidity***: {humidity}%"""
 
-    await ctx.respond(f"{message}")
+        await ctx.respond(f"{message}")
 
 
 def city_coords_fetch(city):
@@ -102,6 +108,8 @@ def city_coords_fetch(city):
     r = requests.get(GEO_API, params=geo_params)
 
     response = r.json()
+    if "cod" in response:
+        return "Err-Internal"
     if len(response) == 0:
         return False
     else:
@@ -208,6 +216,7 @@ def get_date(timezone):
 
 
 def load(bot):
+    """Loads this file as a Hikari-Lightbulb extension."""
     bot.add_plugin(plugin)
 
 
